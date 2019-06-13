@@ -1,0 +1,51 @@
+#目标：每个1km*1km的网格中，放置红外相机，红外相机在单位时间内是否探测到特定物种，探测到记为“1”，否则记为“0”。将调查周期（即是，包含多个单位时间）内的探测结果表示在图上。
+#每一个网格上标注该网格在此探测周期中有几个单位时间上探测到了该物种。以此，显示物种在特定位置（即网格）的出现的相对次数的多少。见以下处理代码。
+#备注：-----表示重点关注的
+#####黑麂4年探测网格中的探测数量2019.6.12#####
+BF14<-read.csv("XY17.csv")
+BF14a<-BF14[,2:7]
+c<-vector()
+length(c)
+for(i in 1:length(BF14a$grid)){
+  c[i]<-sum(BF14a[i,2:6],na.rm = TRUE)#-----将14年每个单位时间的探测结果（1，0）加和
+}
+BF14a$num<-c
+BF14b<-BF14a[,c(1,7)]
+head(BF14b)
+write.csv(BF14b,"bf17_denu.csv")
+##黑麂4年生长季的在各网格中的总探测数
+bf17<-read.csv("bf17_denu.csv")
+head(dd)
+bb<-merge(bf14,bf15,by="grid")
+cc<-merge(bf16,bf17,by="grid")#-----merge（）用相同的一列”grid"将两个数据框整合起来
+dd<-merge(bb,cc,by="grid")
+dd<-dd[,c(1,3,5,7,9)]
+c1<-vector()
+length(c)
+for(i in 1:length(dd$grid)){
+  c1[i]<-sum(dd[i,2:5],na.rm = TRUE)
+}
+dd$num<-c1
+dd<-dd[,c(1,6)]
+write.csv(dd,"BF_4_num.csv")
+#####2019.6.13黑麂4年的总探测数有些不对，因为正常来说4年的上面的NA个数应该是最小的，但这个确是最大的，可能是merge除掉了一些。####
+bf16<-read.csv("bf16_denu.csv")
+dd<-read.csv("BF_4_num.csv")
+setdiff(bf14$grid,dd1$grid)##-----setdiff（）第一个中有，但第二个中没有的。结果表示4年里面果然因为merge的时候去掉了一些行。
+which(bf14$grid==12)
+bf14[10,2:3]
+which(bf17$grid==8)
+which(bf17$grid==57)
+bf17[c(7,52),2:3]
+dd1<-rbind(dd,bf14[10,])
+dd1<-rbind(dd1,bf15[c(7,52),])#-----rbind()的对象一次是两个，且列名必须相同
+write.csv(dd1,"BF_4_num.csv")
+###以上在R中的操作完成，接下来需要在arcgis中操作。1..shp右键join（）.csv文件;2.右键properties，修改symbology（）中的categories（）
+和labels;3.view-layoutview;4.insert-legend;5.file-export map
+
+
+
+
+
+
+
