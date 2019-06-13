@@ -1,0 +1,97 @@
+setwd("F:/ZHENGCC/ANIMALS/BALCK-FRONT")
+###探测数据基础处理####
+species<-read.csv("Gutianshan_SpeciesRecord_2014_2017_IndependentDetection.csv")
+#以上：物种（及物种数量）、位点、时间
+SITE<-read.csv("Gutianshan_CameraSites_latest.csv")###位点及其坐标，加上是第几轮的观测
+colnames(SITE)
+library("stringr")
+a<-str_split_fixed(species$Station, "-", 2)##-----将Station一列，以“-”为依据拆分成两列
+head(a)
+species$Site<-a[,1]
+species$Tsite<-a[,2]
+colnames(species)
+b<-str_split_fixed(SITE$Station, "-", 2)##将Station一列，以“-”为依据拆分成两列
+head(b)
+SITE$Site<-b[,1]
+SITE$Tsite<-b[,2]
+species_bl<-species[which(species$Species=="Black Fronted Muntjak"),]#将所有探测到的物种数是黑麂的记录提取出来。
+colnames(species_bl)
+
+###“2014A”期间的，所有位点上黑麂的detection history(假设2014A所有样方都是从同一个时间布设的，且相机都是从布设的第一天开始就计算有效工作日的)####
+SITE_14A<-SITE[which(SITE$Tsite=="2014A"),]#将所有2014A即是2014年第一轮，即是生长季的位点坐标提取出来。
+site<-unique(SITE_14A$Site)#得到2014年第一轮，所有有相机放置的位点编号（及其数量）
+m<-length(site)
+n<-ceiling(max(SITE_14A$Effective.Work.Days)/30)#—-----ceiling（）偏向变大
+#上1，将2014年第一轮所有位点的最大有效工作日/30,向上取整。得到2014年黑麂以30天为一个周期，
+#最多一共有多少个周期。
+species<-paste("14Ay",1:n,sep = "")#-----paste（）黏连字符串
+#上1，创建数据框的列名，即是第几个探测的周期
+newdata_14A<-as.data.frame(matrix(0,m,n))#-----需要的是数据框，但是先建立成矩阵，（是因为矩阵允许生成0值然后填写别的值吧，猜测的）
+#创建一个空数据框
+names(newdata_14A)=species #将列名改为探测周期数
+row.names(newdata_14A)=site #将行名改为放置红外相机的位点编号
+#以上生成了一个数据框，接下来需要往其中填入数据。
+for(i in 1:m){
+  for(j in 5:1)
+if(ceiling(SITE_14A[i,5]/30)<j){newdata_14A[i,j]<-NA}
+}
+#------以上在newdata中填入NA数据，就是相机没有采集到数据的时间段。（这里没有采集到数据的时间段，我的处理方法是：
+#------如果这个位点的在这期间的有效探测天数/30的值，小于有效探测天数最长的位点除以30的值，则说明，小的部分是没有工作的，即是NA。
+species_bl_14A<-species_bl[which(species_bl$Tsite=="2014A"),]#species—bl是所有年份的黑麂被记录的数据，这里提取出2014A这一年的黑麂探测记录
+colnames(species_bl_14A)
+for(i in 1:5){
+  species_bl_14A[which(ceiling(species_bl_14A$Days/30)==i),14]#如果该条记录的相机工作天数除以30大于0而小于等于1，则说明这条记录是在30天之内的，则将这条记录，增加一列，标记为“1”
+  <-rep(i,length(which(ceiling(species_bl_14A$Days/30)==i)))}#所有除以30大于0小于等于1的，都标记为“1”，大于1小于等于2的，都标记为“2”，这便将所有同一个周期的记录都用同一种数字表示。便于之后将同一个周期的统一在一起。
+#-------以上，我如何判断哪些记录是属于第一个周期，哪些是属于第二个。不能用同样的日期进行区分，因为不同
+#------位点上的红外相机的放置和数据收取不是在统一的时间上开始和结束的，用有效探测天数是有效探测的第几天，
+#------能做到一个位点上的时间间隔都是30天，而用的是同一轮的相机数据能保证这一个地区的不同位点上的监测大概
+#------是同一个时间段的（同样的几个月）
+head(species_bl_14A)
+species_bl_14A$Station1<-cbind(species_bl_14A$Site,species_bl_14A$V14)#
+#------以上，目标数据是每个位点，在第几个探测周期上有被探测到的记录。目前有的记录是重复的，比如在同一个位点的同一个周期上有好多天。
+#-----这样说来，其实我把一个周期内该位点不管有多少次被探测到都标记为1，其实是消除掉了一些未知的。
+bl_A14<-unique(species_bl_14A$Station1)
+head(bl_A14)
+for(i in i:length(bl_A14[,1])){
+newdata_14A[which(row.names(newdata_14A)==bl_A14[i,1]),as.numeric(bl_A14[i,2])]<-1
+}
+write.csv(newdata_14A,"detec-his_14A.csv")
+####以上14A的探测历史计算完毕##
+
+#####回顾代码每一步的意思，看计算其他时间的探测历史，需要改哪些代码#####
+SITE_14A<-SITE[which(SITE$Tsite=="2014B"),]#把2014B的所有的site提取出来    【
+site<-unique(SITE_14A$Site)#看一下，14B一共有多少个不重复的site，用于构建@的行名
+m<-length(site)#14B期间的site个数，用于构架@的行数
+n<-ceiling(max(SITE_14A$Effective.Work.Days)/30)#按照每30天为一个探测周期，14B这个探测期间内，一共有几个周期，作为@的列数
+species<-paste("14By",1:n,sep = "")#做一个@的列名，14A1:代表14A这次探测的第一个探测周期   【
+newdata_14A<-as.data.frame(matrix(0,m,n))#建立空的@，接下来把它填满     
+names(newdata_14A)=species #赋予@列名     
+row.names(newdata_14A)=site #赋予@行名     
+#以上生成了一个数据框，接下来需要往其中填入数据。
+for(i in 1:m){
+  for(j in n:1)###这里的n表示@的最大列数 
+    if(ceiling(SITE_14A[i,5]/30)<j){newdata_14A[i,j]<-NA}###其中的5代表的是SITE的第5列，就是“Effective.Work.Days”     
+}
+#关于上面的解释：如果这个site的有效工作天数，在某一个周期之内，没有的话，它这次检测周期之内，就是缺失探测值的
+#则把这个空格选择出来，赋值为NA，site的有效工作数除以30，小于5，则说明@的第五行，为NA。因为@和选取有效天数的site用的是一样的行。所以[i,j]
+#以上在newedata中填入NA数据，就是相机没有采集到数据的时间段。
+species_bl_14A<-species_bl[which(species_bl$Tsite=="2014A"),]#把物种数据中的2014B，选择出来    【
+colnames(species_bl_14A)
+for(i in 1:n){
+  species_bl_14A[which(ceiling(species_bl_14A$Days/30)==i),14]<-rep(i,length(which(ceiling(species_bl_14A$Days/30)==i)))}
+#上面的数字14是指第14列，这个是把计算出来的值，放在先建立的一个第14列上。我需要通过那个位点，在那个时间上，探测到了黑麂这个物种，的信息来，填写@，
+#想要填写@，必须要把@的第几行和第几列，可以和物种探测信息的这个表格中的行和列，关联起来的东西。这个表格在一个位点上，有多次的探测记录，且探测记录是使用
+#相机工作日来表示的，和我最终需要的0-1数据不匹配。把在一个观测周期之内的数据做统一的标志，1,2,3,4,5，也正好和@的行数对应了。
+head(species_bl_14A)
+species_bl_14A$Station1<-cbind(species_bl_14A$Site,species_bl_14A$V14)
+bl_A14<-unique(species_bl_14A$Station1)
+#需要把需要的行筛选出来，需要的行，在原始数据里面是两行，一个是位点，
+#一个是这个位点的在哪一次观测周期中出现的；所以把这两行，合并为一行，然后把这一行unique出来，也就是同时选择了所需要的两行的并集。
+for(i in i:length(bl_A14[,1])){
+  newdata_14A[which(row.names(newdata_14A)==bl_A14[i,1]),as.numeric(bl_A14[i,2])]<-1
+}
+#把@行，bl_A14的第一列是site，第二列是site上第几个观测周期有数据。
+write.csv(newdata_14A,"detec-his_14B.csv")#     【
+
+
+
